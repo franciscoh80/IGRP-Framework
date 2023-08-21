@@ -22,6 +22,7 @@ public class DatabaseConfigHelper {
 	public static final String IBM = "ibm";
 	public static final String INFORMIX = "informix";
 	public static final String MONGODB = "mongodb";
+	public static final String OTHER = "other";
 	
 	public static String getUrl(String type, String host, String port, String db_name) {
 		switch (type) {
@@ -54,13 +55,13 @@ public class DatabaseConfigHelper {
 			case H2:
 				return "org.hibernate.dialect.H2Dialect";
 			case MYSQL:
-				return "org.hibernate.dialect.MySQL5InnoDBDialect";
+				return "org.hibernate.dialect.MySQL8Dialect";
 			case POSTGRESQL:
-				return "org.hibernate.dialect.PostgreSQLDialect";
+				return "org.hibernate.dialect.PostgreSQL10Dialect";
 			case ORACLE:
 				return "org.hibernate.dialect.Oracle10gDialect";
 			case MSSQL:
-				return "org.hibernate.dialect.SQLServer2008Dialect";
+				return "org.hibernate.dialect.SQLServer2016Dialect";
 			case HSQLDB:
 				return "org.hibernate.dialect.HSQLDialect";
 			case SYBASE:
@@ -146,6 +147,7 @@ public class DatabaseConfigHelper {
 		dbTypes.put(IBM, "IBM DB2");
 		dbTypes.put(INFORMIX, "Informix");	
 //		dbTypes.put(MONGODB, "Mongo DB");		
+		dbTypes.put(OTHER, "Outro");	
 		
 		return dbTypes;
 	}

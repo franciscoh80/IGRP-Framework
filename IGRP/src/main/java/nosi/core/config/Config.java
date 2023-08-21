@@ -24,12 +24,16 @@ public class Config {
     private static final String SEPARATOR_FOR_HTTP = "/";
     private static final String SEPARATOR_FOR_FILESYSTEM = File.separator;
     public static final String BASE_PATH_CONFIGURATION = "config";
-    public static final String VERSION = "1.5.1.230104";
+    public static final String VERSION = "1.7.3.230811";
+    public static final String DEFAULT_V_PAGE = "2.3";
+    private static final Properties configs = new Properties();
+
 
     public String getLinkXSLLogin() {
         String linkXslLogin = "images/IGRP/IGRP2.3/xsl/IGRP-login.xsl";
         //For Design System Login
-       // String linkXslLogin = "images/IGRP/IGRP2.3/xsl/IGRP-login-ds.xsl";
+        if("ds-beta".equals(ConfigApp.getInstance().getMainSettings().getProperty(ConfigCommonMainConstants.IGRP_LOGIN_TEMPLATE.value())))
+        		linkXslLogin = "images/IGRP/IGRP2.3/xsl/IGRP-login-ds.xsl";
         return this.getLinkImgBase().replace("\\\\", SEPARATOR_FOR_HTTP) + linkXslLogin;
     }
 
@@ -102,12 +106,20 @@ public class Config {
         return (u != null) ? u.getName() : "DUA-hexagon";
     }
 
-    public Properties getConfig() {
-        final Properties configs = new Properties();
+    
+
+
+    public static final Properties getConfig() {
+        if (configs.isEmpty()) {
+            loadConfigsFromDatabase();
+        }
+        return configs;
+    }
+
+    private static void loadConfigsFromDatabase() {
         for (nosi.webapps.igrp.dao.Config c : new nosi.webapps.igrp.dao.Config().findAll()) {
             configs.put(c.getName(), c.getValue());
         }
-        return configs;
     }
 
     public String getPathLib() {
@@ -166,7 +178,7 @@ public class Config {
         return ConfigApp.getInstance().getAutenticationType();
     }
 
-    public String getLinkImgBase() {
+    public final String getLinkImgBase() {
         final Properties properties = ConfigApp.getInstance().getMainSettings();
         final StringBuilder path = new StringBuilder();
         if (Boolean.parseBoolean(properties.getProperty(ConfigCommonMainConstants.IGRP_MODE_STANDALONE_ENABLED.value(), "false")))
@@ -179,8 +191,11 @@ public class Config {
         return path.toString();
     }
 
-    public String getLinkImg() {
-        String link = getLinkImgBase() + (getConfig().get("link_img") != null ? getConfig().get("link_img").toString() + getPageVersion() : "images/IGRP/IGRP" + getPageVersion());
+    public final String getLinkImg() {
+        return getLinkImg(Config.DEFAULT_V_PAGE);
+    }
+    public final String getLinkImg(String verson) {
+        String link = getLinkImgBase() + (getConfig().get("link_img") != null ? getConfig().get("link_img").toString() + verson : "images/IGRP/IGRP" + verson);
         return link.replace("\\\\", SEPARATOR_FOR_HTTP);
     }
 
@@ -192,7 +207,7 @@ public class Config {
 
     public String getFooterName() {
         final Object footerName = getConfig().get("footer_name");
-        return footerName != null ? footerName.toString() : "2020 - Copyright NOSi v." + VERSION;
+        return footerName != null ? footerName.toString() : "2023 - Copyright NOSi v." + VERSION;
     }
 
     public String getWelcomeNote() {
@@ -200,17 +215,17 @@ public class Config {
         return welcomeNote != null ? welcomeNote.toString() : "Ola";
     }
 
-    public String getPageVersion() {
-        String app = Igrp.getInstance().getCurrentAppName();
-        String page = Igrp.getInstance().getCurrentPageName();
-        String action = Igrp.getInstance().getCurrentActionName();
-
-        if (app != null && page != null && action != null && !app.equals("") && !page.equals("") && !action.equals("")) {
-            Action ac = new Action().find().andWhere("application.dad", "=", app).andWhere("page", "=", Page.resolvePageName(page)).one();
-            return ac != null ? ac.getVersion() : "2.3";
-        }
-        return "2.3";
-    }
+//    public String getPageVersion() {
+//        String app = Igrp.getInstance().getCurrentAppName();
+//        String page = Igrp.getInstance().getCurrentPageName();
+//        String action = Igrp.getInstance().getCurrentActionName();
+//
+//        if (app != null && page != null && action != null && !app.equals("") && !page.equals("") && !action.equals("")) {
+//            Action ac = new Action().find().andWhere("application.dad", "=", app).andWhere("page", "=", Page.resolvePageName(page)).one();
+//            return ac != null ? ac.getVersion() : DEFAULT_V_PAGE;
+//        }
+//        return DEFAULT_V_PAGE;
+//    }
 
     public String getResolveUrl(String app, String page, String action) {
         return Route.getResolveUrl(app, page, action);
@@ -232,8 +247,8 @@ public class Config {
 
     public String getLinkPageXsl(Action ac) {
         if (!ac.getApplication().getDad().equalsIgnoreCase("igrp") && !ac.getApplication().getDad().equalsIgnoreCase("igrp_studio") && !ac.getApplication().getDad().equalsIgnoreCase("tutorial"))
-            return this.getRootPaht() + "images/IGRP/IGRP" + this.getPageVersion() + "/app/" + ac.getXsl_src();
-        return this.getLinkImgBase() + "images/IGRP/IGRP" + this.getPageVersion() + "/app/" + ac.getXsl_src();
+            return this.getRootPaht() + "images/IGRP/IGRP" + ac.getVersion() + "/app/" + ac.getXsl_src();
+        return this.getLinkImgBase() + "images/IGRP/IGRP" + ac.getVersion() + "/app/" + ac.getXsl_src();
     }
 
     public String getResolvePathPage(String app, String page, String version) {
@@ -383,7 +398,7 @@ public class Config {
         return null;
     }
 
-    public String getBasePahtXslWorkspace(Application app) {
+    public String getBasePahtXslWorkspace(Application app, String verson) {
         String workSpace = this.getWorkspace();
         if (Core.isNotNull(workSpace))
             return workSpace + SEPARATOR_FOR_FILESYSTEM + this.getWebapp() + SEPARATOR_FOR_FILESYSTEM + this.getImageAppPath(app, "2.3");
@@ -461,7 +476,7 @@ public class Config {
         String description = app.getDescription();
         String linkHome = headerConfig.getLinkHome();
         XMLWritter xml = new XMLWritter();
-        xml.setElement("ispublic", page != null ?page.getTipo():0); // 0 = Privado (Authentication); 1 = Publico; 2 = Publico e Link Encryptado 
+        xml.setElement("ispublic", Core.getCurrentUser()!=null?0:1); // Page used without a user with login
         
         xml.setElement("template", app.getTemplate());
         xml.setElement("title", Core.getSwitchNotNullValue(title, headerConfig.getTitle()));
@@ -469,7 +484,7 @@ public class Config {
 
         xml.setElement("version", VERSION);
         xml.setElement("link", linkHome);
-        xml.setElement("link_img", getLinkImg());
+        xml.setElement("link_img", getLinkImg(page != null ? page.getVersion() : Config.DEFAULT_V_PAGE));
         if (Core.isNotNull(target)) {
             xml.setElement("target", target);
         }
